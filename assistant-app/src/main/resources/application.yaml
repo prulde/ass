@@ -1,0 +1,56 @@
+server:
+  port: 8000
+
+logging:
+  file:
+    path: logs
+  level:
+    web: trace
+    root: info
+    org.hibernate.SQL: debug
+
+spring:
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+  output:
+    ansi:
+      enabled: ALWAYS
+  application:
+    name: assistant-app
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://localhost:5434/assistant
+    username: postgres
+    password: postgres
+    type: com.zaxxer.hikari.HikariDataSource
+    hikari:
+      maximum-pool-size: 10
+      connection-test-query: SELECT 1;
+      idle-timeout: 30000
+  jpa:
+    properties:
+      hibernate:
+        ddl-auto: validate
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        show_sql: true
+  liquibase:
+    enabled: true
+    change-log: classpath:db/db.changelog-master.xml
+    user: postgres
+    password: postgres
+    url: jdbc:postgresql://localhost:5434/assistant
+
+file-manager:
+  s3:
+    url: "http://127.0.0.1:9000"
+    credentials:
+      user: minioadmin
+      password: minioadmin
+
+springdoc:
+  api-docs:
+    path: /api/docs
+  swagger-ui:
+    path: /api/swagger-ui

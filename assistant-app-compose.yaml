@@ -1,0 +1,33 @@
+version: "3.8"
+name: assistant-app
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: assistant
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - ./assistant-app/src/main/resources/db/init.sql:/docker-entrypoint-initdb.d/assistant.sql
+      - pg-data:/var/lib/postgresql/data
+    ports:
+      - "5434:5432"
+
+  minio:
+    container_name: minio
+    image: minio/minio
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - minio-data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    command: server /data --console-address ":9001"
+volumes:
+  pg-data:
+  minio-data:
