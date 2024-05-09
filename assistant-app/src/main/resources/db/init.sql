@@ -29,6 +29,7 @@ create table if not exists skill
 	id bigint generated always as identity,
 	competency_id bigint,
 	name varchar(100),
+	file_name varchar(200),
 	foreign key (competency_id) references competency(id)
 		on delete cascade
 		on update cascade,
@@ -62,16 +63,16 @@ create table if not exists test_attempt
 	primary key (id)
 );
 
-create table if not exists markdown
-(
-    id bigint generated always as identity,
-    file_id varchar(200),
-    skill_id bigint,
-    foreign key (skill_id) references skill(id)
-    	on delete cascade
-    	on update cascade,
-    primary key(id)
-);
+--create table if not exists markdown
+--(
+--    id bigint generated always as identity,
+--    file_id varchar(200),
+--    skill_id bigint,
+--    foreign key (skill_id) references skill(id)
+--    	on delete cascade
+--    	on update cascade,
+--    primary key(id)
+--);
 
 create table if not exists test_question
 (

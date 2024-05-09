@@ -18,14 +18,8 @@ data class CompetencyModel(
     data class SkillModel(
         val id: Long? = null,
         val name: String? = null,
-        val markdowns: List<FileModel>? = null,
-    ) {
-        @Schema(name = "CompetencyCreateRequest\$Skill\$Model")
-        data class FileModel(
-            val id: Long? = null,
-            val fileName: String? = null,
-        )
-    }
+        val markdowns: String? = null,
+    )
 
     @Schema(name = "CompetencyCreateRequest\$TestQuestionModel")
     data class TestQuestionModel(

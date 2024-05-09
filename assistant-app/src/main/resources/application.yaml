@@ -8,6 +8,7 @@ logging:
     web: trace
     root: info
     org.hibernate.SQL: debug
+    org.jooq.tools.LoggerListener: DEBUG
 
 spring:
   servlet:
@@ -53,4 +54,5 @@ springdoc:
   api-docs:
     path: /api/docs
   swagger-ui:
+    operationsSorter: method
     path: /api/swagger-ui

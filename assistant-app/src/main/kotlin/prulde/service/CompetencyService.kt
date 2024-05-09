@@ -3,20 +3,22 @@ package prulde.service
 import org.jooq.impl.DSL.*
 import org.jooq.*
 import org.jooq.DSLContext
-import org.jooq.impl.DSL
 import org.jooq.kotlin.mapping
 
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import prulde.keys.SKILL__SKILL_COMPETENCY_ID_FKEY
 import prulde.model.CompetencyModel
-import prulde.model.request.CompetencyUpdateRequest
+import prulde.model.request.*
 import prulde.tables.Competency.Companion.COMPETENCY
 import prulde.tables.Skill.Companion.SKILL
-import prulde.tables.Markdown.Companion.MARKDOWN
 import prulde.tables.TestQuestion.Companion.TEST_QUESTION
 import prulde.tables.AnswerOption.Companion.ANSWER_OPTION
-import prulde.tables.records.MarkdownRecord
+import prulde.tables.records.AnswerOptionRecord
+import prulde.tables.records.CompetencyRecord
 import prulde.tables.records.SkillRecord
+import prulde.tables.records.TestQuestionRecord
+import prulde.util.BadInputException
 
 @Service
 class CompetencyService(
@@ -46,6 +48,8 @@ class CompetencyService(
             .from(COMPETENCY)
             .where(coalesce(name, null).isNull.or(COMPETENCY.NAME.eq(name)))
             .orderBy(COMPETENCY.NAME.asc(), COMPETENCY.PRIORITY.asc())
+            .limit(size)
+            .offset(size * (page - 1))
             .map {
                 CompetencyModel(
                     id = it.value1(),
@@ -68,14 +72,7 @@ class CompetencyService(
                 select(
                     SKILL.ID,
                     SKILL.NAME,
-                    multiset(
-                        select(
-                            MARKDOWN.ID,
-                            MARKDOWN.FILE_ID,
-                        )
-                            .from(MARKDOWN)
-                            .where(MARKDOWN.SKILL_ID.eq(SKILL.ID))
-                    ).mapping(CompetencyModel.SkillModel::FileModel)
+                    SKILL.FILE_NAME
                 )
                     .from(SKILL)
                     .where(SKILL.COMPETENCY_ID.eq(COMPETENCY.ID))
@@ -105,136 +102,191 @@ class CompetencyService(
 
 
     @Transactional
-    fun putCompetency(request: CompetencyUpdateRequest): Unit {
-        val competencyRecord = dsl.fetchOne(COMPETENCY, COMPETENCY.ID.eq(request.id))
-            ?: dsl.newRecord(COMPETENCY)
+    fun patchCompetency(id: Long, request: CompetencyPatchRequest): CompetencyModel? {
+        dsl.fetchOne(COMPETENCY, COMPETENCY.ID.eq(id))
+            ?: return null
 
-        //val skills = competencyRecord.fetchChildren(SKILL__SKILL_COMPETENCY_ID_FKEY).toMutableList()
-
-        //competencyRecord
         dsl.update(COMPETENCY)
             .set(COMPETENCY.NAME, request.name)
             .set(COMPETENCY.PRIORITY, request.priority)
             .set(COMPETENCY.LEVEL, request.level)
             .set(COMPETENCY.TEST_TIME_MINUTES, request.testTimeMinutes)
             .set(COMPETENCY.PASS_THRESHOLD, request.passThreshold)
-            .where(COMPETENCY.ID.eq(request.id))
+            .where(COMPETENCY.ID.eq(id))
             .execute()
 
-        val skills: MutableList<SkillRecord> = mutableListOf()
-        val markdowns: MutableList<MarkdownRecord> = mutableListOf()
-        request.skills?.forEach() { skill ->
-            skills.add(
-                SkillRecord(
-                    id = skill.id,
-                    competencyId = request.id,
-                    name = skill.name
-                )
-            )
-            skill.markdowns?.forEach { markdown ->
-                markdowns.add(
-                    MarkdownRecord(
-                        id = markdown.id,
-                        skillId = skill.id,
-                        fileId = markdown.fileName,
-                    )
-                )
-            }
-        }
-
-        dsl.insertInto(SKILL)
-            .columns(SKILL.COMPETENCY_ID, SKILL.NAME)
-            .apply { skills.forEach { values(request.id, it.name) } }
-            .onConflict(SKILL.ID)
-            .doUpdate()
-            .set(SKILL.NAME, DSL.field("EXCLUDED.name", SKILL.NAME.dataType))
-            .execute()
-
-        // delete rows, insert new instead???
-        // check sql for update bt
-        val sl = dsl.insertInto(SKILL)
-            .columns(SKILL.COMPETENCY_ID, SKILL.NAME)
-            .apply { skills.forEach { values(request.id, it.name) } }
-            .onConflict(SKILL.ID)
-            .doUpdate()
-            .set(SKILL.NAME, DSL.field("EXCLUDED.name", SKILL.NAME.dataType))
-            .getSQL()
-
-
-//
-//        val competencyEntity: CompetencyEntity = request.let {
-//            CompetencyEntity(
-//                id = it.id,
-//                name = it.name,
-//                level = it.level,
-//                priority = it.priority,
-//                testTimeMinutes = it.testTimeMinutes,
-//                passThreshold = it.passThreshold,
-//                competencySkills = it.skills?.map {
-//                    SkillEntity(
-//                        name = it.name,
-//                        skillMarkdowns = it.markdowns?.map {
-//                            MarkdownEntity(
-//                                fileId = it.name,
-//                            )
-//                        }
-//                    )
-//                } ?: mutableListOf(),
-//                testQuestions = it.questions?.map {
-//                    TestQuestionEntity(
-//                        questionDescription = it.description,
-//                        questionOptions = it.answerOptions?.map {
-//                            AnswerOptionEntity(
-//                                option = it.option,
-//                                isCorrect = it.isCorrect,
-//                            )
-//                        } ?: mutableListOf()
-//                    )
-//                } ?: mutableListOf()
-//            )
-//        }
-//        competencyRepository.save(competencyEntity)
-//        return competencyEntityToModel(competencyEntity)
+        return getCompetencyById(id)
     }
 
     @Transactional
-    fun deleteCompetency(id: Long): Unit {
+    fun patchTestQuestion(id: Long, questionId: Long, request: TestQuestionPatchRequest): CompetencyModel? {
+        val question = dsl.fetchOne(TEST_QUESTION, TEST_QUESTION.ID.eq(questionId))
+            ?: return null
+
+        question.questionDescription = request.description
+        question.store()
+
+        val answerOptions =
+            dsl.fetch(ANSWER_OPTION, ANSWER_OPTION.ID.`in`(request.answerOptions?.map { it.id })).toList()
+
+        try {
+            // bad:(
+            request.answerOptions?.forEachIndexed { index, ao ->
+                answerOptions[index].let {
+                    it.id = ao.id
+                    it.tqId = questionId
+                    it.option = ao.option
+                    it.isCorrect = ao.isCorrect
+                }
+            }
+        } catch (e: Exception) {
+            throw BadInputException(e.message)
+        }
+
+
+        dsl.batchUpdate(answerOptions)
+            .execute()
+
+        return getCompetencyById(id)
+    }
+
+    @Transactional
+    fun updateCompetencySkills(id: Long, request: List<SkillUpdateRequest>): CompetencyModel? {
+        val competencyRecord = dsl.fetchOne(COMPETENCY, COMPETENCY.ID.eq(id))
+            ?: return null
+
+        competencyRecord.fetchChildren(SKILL__SKILL_COMPETENCY_ID_FKEY)
+            .forEach {
+                it.delete()
+            }
+
+        val skills: MutableList<SkillRecord> = mutableListOf()
+        request.forEach { skill ->
+            skills.add(
+                SkillRecord(
+                    competencyId = id,
+                    name = skill.name,
+                    fileName = skill.markdowns?.joinToString(separator = ",")
+                )
+            )
+        }
+
+        dsl.batchInsert(skills)
+            .execute()
+
+        return getCompetencyById(id)
+    }
+
+    @Transactional
+    fun postTestQuestions(id: Long, request: List<TestQuestionPostRequest>): CompetencyModel? {
+        dsl.fetchOne(COMPETENCY, COMPETENCY.ID.eq(id))
+            ?: return null
+
+
+        val result = dsl.insertInto(TEST_QUESTION)
+            .columns(TEST_QUESTION.COMPETENCY_ID, TEST_QUESTION.QUESTION_DESCRIPTION)
+            .apply { request.forEach { values(id, it.description) } }
+            .returning(TEST_QUESTION.ID)
+            .fetch()
+
+        val answerOptions: MutableList<AnswerOptionRecord> = mutableListOf()
+        try {
+            result.forEachIndexed { index, testQuestionRecord ->
+                request[index].answerOptions?.forEach { option ->
+                    answerOptions.add(
+                        AnswerOptionRecord(
+                            tqId = testQuestionRecord.id,
+                            option = option.option,
+                            isCorrect = option.isCorrect,
+                        )
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            throw BadInputException(e.message)
+        }
+
+
+        dsl.batchInsert(answerOptions)
+            .execute()
+
+        return getCompetencyById(id)
+    }
+
+    @Transactional
+    fun deleteCompetencySkill(id: Long, skillId: Long) {
+        // 1=ok, 0=bad
+        val result = dsl.deleteFrom(SKILL)
+            .where(SKILL.ID.eq(skillId))
+            .execute()
+    }
+
+    @Transactional
+    fun deleteCompetency(id: Long) {
         // 1=ok, 0=bad
         val result = dsl.delete(COMPETENCY)
             .where(COMPETENCY.ID.eq(id))
             .execute()
     }
 
-//    private fun competencyEntityToModel(competency: CompetencyEntity) =
-//        competency.let {
-//            CompetencyModel(
-//                id = it.id,
-//                name = it.name,
-//                level = it.level,
-//                priority = it.priority,
-//                testTimeMinutes = it.testTimeMinutes,
-//                passThreshold = it.passThreshold,
-//                skills = it.competencySkills?.map {
-//                    CompetencyModel.SkillModel(
-//                        name = it.name,
-//                        markdowns = it.skillMarkdowns?.map {
-//                            CompetencyModel.SkillModel.FileModel(
-//                                fileName = it.fileId
-//                            )
-//                        }
-//                    )
-//                },
-//                questions = it.testQuestions?.map {
-//                    CompetencyModel.TestQuestionModel(
-//                        description = it.questionDescription,
-//                        answerOptions = it.questionOptions?.map {
-//                            CompetencyModel.TestQuestionModel.AnswerOptionModel(
-//                                option = it.option,
-//                                isCorrect = it.isCorrect
-//                            )
-//                        }
-//                    )
-//                }
-//            )
-//        }
+    @Transactional
+    fun deleteTestQuestion(id: Long, questionId: Long) {
+        // 1=ok, 0=bad
+        val result = dsl.deleteFrom(TEST_QUESTION)
+            .where(TEST_QUESTION.ID.eq(questionId))
+            .execute()
+    }
+
+    @Transactional
+    fun postCompetency(request: CompetencyPostRequest): CompetencyModel {
+        val competencyRecord = dsl.newRecord(COMPETENCY)
+        competencyRecord.let {
+            it.name = request.name
+            it.priority = request.priority
+            it.level = request.level
+            it.testTimeMinutes = request.testTimeMinutes
+            it.passThreshold = request.passThreshold
+        }
+
+        competencyRecord.store()
+
+        val skills: MutableList<SkillRecord> = mutableListOf()
+        request.skills?.forEach { skill ->
+            skills.add(
+                SkillRecord(
+                    competencyId = competencyRecord.id,
+                    name = skill.name,
+                    fileName = skill.markdowns?.joinToString(separator = ",")
+                )
+            )
+        }
+
+        dsl.batchInsert(skills)
+            .execute()
+
+
+        val result = dsl.insertInto(TEST_QUESTION)
+            .columns(TEST_QUESTION.COMPETENCY_ID, TEST_QUESTION.QUESTION_DESCRIPTION)
+            .apply { request.questions?.forEach { values(competencyRecord.id, it.description) } }
+            .returning(TEST_QUESTION.ID)
+            .fetch()
+
+        val answerOptions: MutableList<AnswerOptionRecord> = mutableListOf()
+        result.forEachIndexed { index, testQuestionRecord ->
+            request.questions?.get(index)?.answerOptions?.forEach { option ->
+                answerOptions.add(
+                    AnswerOptionRecord(
+                        tqId = testQuestionRecord.id,
+                        option = option.option,
+                        isCorrect = option.isCorrect,
+                    )
+                )
+            }
+        }
+
+        dsl.batchInsert(answerOptions)
+            .execute()
+
+        return getCompetencyById(competencyRecord.id!!)
+    }
 }

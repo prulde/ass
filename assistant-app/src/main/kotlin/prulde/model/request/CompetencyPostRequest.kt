@@ -4,8 +4,7 @@ import com.fasterxml.jackson.annotation.JsonInclude
 import io.swagger.v3.oas.annotations.media.Schema
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
-data class CompetencyUpdateRequest(
-    val id: Long? = null,
+data class CompetencyPostRequest(
     val name: String? = null,
     val priority: Int? = null,
     val level: String? = null,
@@ -18,14 +17,8 @@ data class CompetencyUpdateRequest(
     data class Skill(
         val id: Long? = null,
         val name: String? = null,
-        val markdowns: List<File>? = null,
-    ) {
-        @Schema(name = "CompetencyUpdateRequest\$Skill\$File")
-        data class File(
-            val id: Long? = null,
-            val fileName: String? = null,
-        )
-    }
+        val markdowns: List<String>? = null,
+    )
 
     @Schema(name = "CompetencyUpdateRequest\$TestQuestion")
     data class TestQuestion(
