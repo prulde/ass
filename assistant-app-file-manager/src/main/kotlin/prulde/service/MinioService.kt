@@ -1,4 +1,4 @@
-package prulde.filemanager
+package prulde.service
 
 import io.minio.GetObjectArgs
 import io.minio.MinioClient
@@ -15,21 +15,22 @@ class MinioService(
     private val logger = KotlinLogging.logger() {}
 
     override fun uploadFile(file: MultipartFile, directory: String): String {
+        val path = "${directory}/${file.originalFilename}"
         val obj = PutObjectArgs.builder()
             .bucket(appBucket)
-            .`object`("${directory}/" + file.originalFilename)
+            .`object`(path)
             .stream(file.inputStream, file.size, -1)
             .build()
         minioClient.putObject(obj)
 
-        return "${directory}/${file.originalFilename}"
+        return path
     }
 
-    override fun downloadFile(fileName: String): ByteArray {
+    override fun downloadFile(filePath: String): ByteArray {
         val obj = minioClient.getObject(
             GetObjectArgs.builder()
                 .bucket(appBucket)
-                .`object`(fileName)
+                .`object`(filePath)
                 .build()
         )
         return obj.readAllBytes()

@@ -1,4 +1,4 @@
-package prulde.filemanager
+package prulde.configuration
 
 import io.minio.MinioClient
 import org.springframework.beans.factory.annotation.Value

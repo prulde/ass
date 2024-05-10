@@ -17,5 +17,7 @@
 
     <modules>
         <module>assistant-app</module>
+        <module>assistant-app-file-manager</module>
+        <module>assistant-app-gateway</module>
     </modules>
 </project>

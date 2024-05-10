@@ -1,9 +1,9 @@
 server:
-  port: 8000
+  port: 8001
 
 logging:
   file:
-    path: logs
+    path: logs/app
   level:
     web: trace
     root: info
@@ -11,10 +11,6 @@ logging:
     org.jooq.tools.LoggerListener: DEBUG
 
 spring:
-  servlet:
-    multipart:
-      max-file-size: 10MB
-      max-request-size: 10MB
   output:
     ansi:
       enabled: ALWAYS
@@ -30,12 +26,6 @@ spring:
       maximum-pool-size: 10
       connection-test-query: SELECT 1;
       idle-timeout: 30000
-  jpa:
-    properties:
-      hibernate:
-        ddl-auto: validate
-        dialect: org.hibernate.dialect.PostgreSQLDialect
-        show_sql: true
   liquibase:
     enabled: true
     change-log: classpath:db/db.changelog-master.xml
@@ -43,16 +33,9 @@ spring:
     password: postgres
     url: jdbc:postgresql://localhost:5434/assistant
 
-file-manager:
-  s3:
-    url: "http://127.0.0.1:9000"
-    credentials:
-      user: minioadmin
-      password: minioadmin
-
 springdoc:
   api-docs:
-    path: /api/docs
+    path: /main-app/api-docs
   swagger-ui:
     operationsSorter: method
-    path: /api/swagger-ui
+    path: /main-app/swagger-ui

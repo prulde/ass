@@ -8,11 +8,11 @@ import org.springframework.boot.runApplication
 @SpringBootApplication
 @OpenAPIDefinition(
     servers = [
-        Server(url = "/", description = "main-app")
+        Server(url = "/", description = "file-manager")
     ]
 )
-class AssistantAppApplication
+class AssistantAppFileManagerApplication
 
 fun main(args: Array<String>) {
-    runApplication<AssistantAppApplication>(*args)
+    runApplication<AssistantAppFileManagerApplication>(*args)
 }

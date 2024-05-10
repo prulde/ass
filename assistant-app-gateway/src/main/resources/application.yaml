@@ -1,0 +1,56 @@
+server:
+  port: 8000
+
+logging:
+  level:
+    root: INFO
+    org:
+      springframework:
+        cloud:
+          gateway: TRACE
+  file:
+    path: logs/gateway
+
+spring:
+  output:
+    ansi:
+      enabled: ALWAYS
+  cloud:
+    gateway:
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins: "*"
+            allowedHeaders: "*"
+            allowedMethods:
+              - GET
+              - POST
+              - DELETE
+              - PATCH
+              - PUT
+      routes:
+        ## Main-App ROUTES
+        - id: main
+          uri: http://localhost:8001
+          predicates:
+            - Path=/main-app/api-docs,/api/competencies/**
+
+        ## File-Manager ROUTES
+        - id: file-manager
+          uri: http://localhost:8002
+          predicates:
+            - Path=/file-manager/api-docs,/api/files/**
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    operationsSorter: method
+    enabled: true
+    path: /swagger-ui
+    config-url: /v3/api-docs/swagger-config
+    urls:
+      - url: /main-app/api-docs
+        name: Main-App
+      - url: /file-manager/api-docs
+        name: File-Manager
