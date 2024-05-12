@@ -41,6 +41,12 @@ spring:
           predicates:
             - Path=/file-manager/api-docs,/api/files/**
 
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8004/realms/assistant-app
+
 springdoc:
   api-docs:
     enabled: true
