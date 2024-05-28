@@ -12,7 +12,6 @@ data class UserModel(
     val patronymic: String? = null,
     val fullName: String? = null,
     val email: String? = null,
-    val isActive: Boolean? = null,
     val userCompetencies: List<UserCompetency>? = null,
 ) {
     @Schema(name = "UserModel\$UserCompetency")
@@ -28,14 +27,14 @@ data class UserModel(
     ) {
         @Schema(name = "UserModel\$UserCompetency\$TestAttempt")
         data class TestAttempt(
-            val solutionDuration: Int,
-            val uploadedAt: LocalDateTime,
-            val answers: List<Answer>,
+            val solutionDuration: Int? = null,
+            val uploadedAt: LocalDateTime? = null,
+            val answers: List<Answer>? = null,
         ) {
             @Schema(name = "UserModel\$UserCompetency\$TestAttempt\$Answer")
             data class Answer(
-                val option: String,
-                val isCorrect: Boolean,
+                val option: String? = null,
+                val isCorrect: Boolean? = null,
             )
         }
     }

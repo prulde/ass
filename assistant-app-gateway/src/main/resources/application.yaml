@@ -56,7 +56,7 @@ springdoc:
     path: /swagger-ui
     config-url: /v3/api-docs/swagger-config
     urls:
-      - url: /main-app/api-docs
+      - url: ${MAIN_URL:/main-app/api-docs}
         name: Main-App
-      - url: /file-manager/api-docs
+      - url: ${FM_URL:/file-manager/api-docs}
         name: File-Manager

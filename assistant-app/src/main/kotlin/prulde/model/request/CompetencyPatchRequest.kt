@@ -9,6 +9,4 @@ data class CompetencyPatchRequest(
     val level: String? = null,
     val testTimeMinutes: Int? = null,
     val passThreshold: Int? = null,
-    val skills: List<CompetencyPostRequest.Skill>? = null,
-    val questions: List<CompetencyPostRequest.TestQuestion>? = null,
 )

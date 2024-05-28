@@ -2,62 +2,55 @@ version: "3.8"
 name: assistant-app
 
 services:
-  postgres:
-    image: postgres:15
-    container_name: postgres
+  gateway:
+    container_name: "gateway"
+    build:
+      context: ./assistant-app-gateway/
+      dockerfile: ./Dockerfile
+    #image: assistant-app:gateway
+    extra_hosts:
+      - host.docker.internal:host-gateway
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: assistant
-      PGDATA: /var/lib/postgresql/data/pgdata
+      MAIN_URL: http://host.docker.internal:8000/main-app/api-docs
+      FM_URL: http://host.docker.internal:8000/file-manager/api-docs
+    ports:
+      - "8000:8000"
     volumes:
-      - ./assistant-app/src/main/resources/db/init.sql:/docker-entrypoint-initdb.d/assistant.sql
-      - pg-data:/var/lib/postgresql/data
-    ports:
-      - "5434:5432"
-
-  minio:
-    container_name: minio
-    image: minio/minio
-    environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
-    volumes:
-      - minio-data:/data
-    ports:
-      - "9000:9000"
-      - "9001:9001"
-    command: server /data --console-address ":9001"
-
-  keycloak-postgres:
-    image: postgres:15
-    container_name: keycloak-postgres
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: keycloak
-    ports:
-      - "5234:5432"
-
-  keycloak:
-    image: bitnami/keycloak
-    container_name: keycloak
-    volumes:
-      - ./keycloak:/opt/keycloak/data/import
-    environment:
-      DB_VENDOR: POSTGRES
-      DB_ADDR: keycloak-postgres
-      DB_DATABASE: keycloak
-      DB_USER: postgres
-      DB_PASSWORD: postgres
-      KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: admin
-      KEYCLOAK_EXTRA_ARGS: "-Dkeycloak.import=/opt/keycloak/data/import/"
-    ports:
-      - "8004:8080"
+      - "ass-logs:/logs"
     depends_on:
-      - keycloak-postgres
+      - "main"
+      - "file-manager"
+
+  main:
+    container_name: "main"
+    build:
+      context: ./assistant-app/
+      dockerfile: ./Dockerfile
+    #image: assistant-app:main
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    environment:
+      spring.datasource.url: jdbc:postgresql://host.docker.internal:5434/assistant
+      spring.liquibase.url: jdbc:postgresql://host.docker.internal:5434/assistant
+    ports:
+      - "8001:8001"
+    volumes:
+      - "ass-logs:/logs"
+
+  file-manager:
+    container_name: "file-manager"
+    build:
+      context: ./assistant-app-file-manager/
+      dockerfile: ./Dockerfile
+    #image: assistant-app:file-manager
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    environment:
+      file-manager.s3.url: http://host.docker.internal:9000
+    ports:
+      - "8002:8002"
+    volumes:
+      - "ass-logs:/logs"
 
 volumes:
-  pg-data:
-  minio-data:
+  ass-logs:

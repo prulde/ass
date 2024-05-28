@@ -13,22 +13,19 @@ data class CompetencyPostRequest(
     val skills: List<Skill>? = null,
     val questions: List<TestQuestion>? = null,
 ) {
-    @Schema(name = "CompetencyUpdateRequest\$Skill")
+    @Schema(name = "CompetencyPostRequest\$Skill")
     data class Skill(
-        val id: Long? = null,
         val name: String? = null,
         val markdowns: List<String>? = null,
     )
 
-    @Schema(name = "CompetencyUpdateRequest\$TestQuestion")
+    @Schema(name = "CompetencyPostRequest\$TestQuestion")
     data class TestQuestion(
-        val id: Long? = null,
         val description: String? = null,
         val answerOptions: List<AnswerOption>? = null,
     ) {
-        @Schema(name = "CompetencyUpdateRequest\$TestQuestion\$AnswerOption")
+        @Schema(name = "CompetencyPostRequest\$TestQuestion\$AnswerOption")
         data class AnswerOption(
-            val id: Long? = null,
             val option: String? = null,
             val isCorrect: Boolean? = null,
         )

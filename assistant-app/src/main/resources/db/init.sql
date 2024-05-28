@@ -63,17 +63,6 @@ create table if not exists test_attempt
 	primary key (id)
 );
 
---create table if not exists markdown
---(
---    id bigint generated always as identity,
---    file_id varchar(200),
---    skill_id bigint,
---    foreign key (skill_id) references skill(id)
---    	on delete cascade
---    	on update cascade,
---    primary key(id)
---);
-
 create table if not exists test_question
 (
     id bigint generated always as identity,
@@ -112,10 +101,10 @@ create table if not exists user_answers
 );
 
 insert into users(
-	name, surname, patronymic, email)
-	values ('name1', 'surname1', 'patronymic1', 'email1'),
-	       ('name2', 'surname2', 'patronymic2', 'email2'),
-	       ('name3', 'surname3', 'patronymic3', 'email3');
+	name, surname, patronymic, full_name, email)
+	values ('name1', 'surname1', 'patronymic1', 'name1 surname1 patronymic1', 'email1'),
+	       ('name2', 'surname2', 'patronymic2', 'name2 surname2 patronymic2', 'email2'),
+	       ('name3', 'surname3', 'patronymic3', 'name3 surname3 patronymic3', 'email3');
 
 
 insert into competency(name, level, priority)

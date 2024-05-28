@@ -28,12 +28,14 @@ class CompetencyService(
     @Transactional(readOnly = true)
     fun listCompetencyNames(): List<CompetencyModel> =
         dsl.selectDistinct(
+            COMPETENCY.ID,
             COMPETENCY.NAME
         )
             .from(COMPETENCY)
             .map {
                 CompetencyModel(
-                    name = it.value1(),
+                    id = it.value1(),
+                    name = it.value2(),
                 )
             }
 
