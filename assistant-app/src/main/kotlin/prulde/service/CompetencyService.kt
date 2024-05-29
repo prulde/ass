@@ -32,6 +32,7 @@ class CompetencyService(
             COMPETENCY.NAME
         )
             .from(COMPETENCY)
+            .where(COMPETENCY.PRIORITY.eq(1))
             .map {
                 CompetencyModel(
                     id = it.value1(),

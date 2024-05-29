@@ -3,7 +3,6 @@ package prulde.controller
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.web.bind.annotation.*
 import prulde.model.CompetencyModel
-import prulde.model.TestAttemptModel
 import prulde.model.UserModel
 import prulde.model.request.SubmitTestRequest
 import prulde.model.request.UserPatchRequest
@@ -58,14 +57,6 @@ class UserController(
     @GetMapping("/{email}")
     fun getUserByEmail(@PathVariable(name = "email") email: String): UserModel? =
         userService.getUserByEmail(email)
-
-    @Tag(name = "common")
-    @GetMapping("/{id}/competencies/{competencyId}/test")
-    fun getUserTestAttempts(
-        @PathVariable(name = "id") id: Long,
-        @PathVariable(name = "competencyId") competencyId: Long
-    ): List<TestAttemptModel> =
-        userService.getUserTestAttempts(id, competencyId)
 
     @Tag(name = "client")
     @GetMapping("/{id}/competencies/{competencyId}/next-level")

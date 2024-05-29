@@ -11,7 +11,6 @@ import prulde.tables.AnswerOption.Companion.ANSWER_OPTION
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import prulde.model.CompetencyModel
-import prulde.model.TestAttemptModel
 import prulde.model.UserModel
 import prulde.model.request.SubmitTestRequest
 import prulde.model.request.UserPatchRequest
@@ -157,24 +156,6 @@ class UserService(
     }
 
     @Transactional(readOnly = true)
-    fun getUserTestAttempts(id: Long, competencyId: Long): List<TestAttemptModel> =
-        dsl.select(
-            USER_COMPETENCY.testAttempt().SOLUTION_DURATION,
-            USER_COMPETENCY.testAttempt().UPLOADED_AT,
-            multiset(
-                select(
-                    USER_ANSWERS.answerOption().OPTION,
-                    USER_ANSWERS.answerOption().IS_CORRECT,
-                )
-                    .from(USER_ANSWERS)
-                    .where(USER_ANSWERS.TEST_ATTEMPT_ID.eq(TEST_ATTEMPT.ID))
-            ).mapping(TestAttemptModel::Answer)
-        )
-            .from(USER_COMPETENCY)
-            .where(USER_COMPETENCY.USER_ID.eq(id).and(USER_COMPETENCY.COMPETENCY_ID.eq(competencyId)))
-            .fetch(Records.mapping(::TestAttemptModel))
-
-    @Transactional(readOnly = true)
     fun getUserCompetencyNextLevel(id: Long, competencyId: Long): CompetencyModel? {
         val previousCompetencyLevel = dsl.fetchOne(COMPETENCY, COMPETENCY.ID.eq(competencyId)) ?: return null
 
@@ -236,8 +217,16 @@ class UserService(
 
     @Transactional
     fun submitTest(id: Long, competencyId: Long, request: SubmitTestRequest) {
-        val userCompetencyRecord = dsl.fetchOne(USER_COMPETENCY, USER_COMPETENCY.COMPETENCY_ID.eq(competencyId))
+        val userCompetencyRecord = dsl.fetchOne(
+            USER_COMPETENCY, USER_COMPETENCY.COMPETENCY_ID.eq(competencyId).and(
+                USER_COMPETENCY.USER_ID.eq(id)
+            )
+        )
             ?: return
+
+        val competencyRecord = dsl.fetchOne(COMPETENCY, COMPETENCY.ID.eq(userCompetencyRecord.competencyId))
+            ?: return
+
         val testAttemptRecord = dsl.newRecord(TEST_ATTEMPT)
         testAttemptRecord.userCompetencyId = userCompetencyRecord.id
         testAttemptRecord.solutionDuration = request.solutionDuration
@@ -245,16 +234,36 @@ class UserService(
         testAttemptRecord.store()
 
         val answerRecords: MutableList<UserAnswersRecord> = mutableListOf()
+        val aoIds: MutableList<Long?> = mutableListOf()
 
         request.answers?.forEach {
             val answerRecord = dsl.newRecord(USER_ANSWERS)
             answerRecord.testAttemptId = testAttemptRecord.id
             answerRecord.aoId = it.answerOptionId
             answerRecords.add(answerRecord)
+
+            aoIds.add(it.answerOptionId)
         }
 
         dsl.batchInsert(answerRecords)
             .execute()
+
+        if (request.solutionDuration > competencyRecord.testTimeMinutes!!)
+            return
+
+        val answerOptionRecords: MutableList<AnswerOptionRecord> =
+            dsl.fetch(ANSWER_OPTION, ANSWER_OPTION.ID.`in`(aoIds))
+
+        var passedCount: Int = 0
+        answerOptionRecords.forEach {
+            if (it.isCorrect == true)
+                passedCount += 1
+        }
+
+        if (passedCount >= competencyRecord.passThreshold!!) {
+            userCompetencyRecord.completed = true
+            userCompetencyRecord.store()
+        }
     }
 
     @Transactional
