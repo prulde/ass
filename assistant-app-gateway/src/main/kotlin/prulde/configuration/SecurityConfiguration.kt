@@ -27,7 +27,12 @@ class SecurityConfiguration {
     )
 
     private val admin = listOf(
-        "/api/competencies/**",
+        "/api/competencies/{id:[\\d+]}",
+        "/api/competencies/{id:[\\d+]}/test-questions/{id2:[\\d+]}",
+        "/api/competencies/{id:[\\d+]}/test-questions",
+        "/api/competencies/{id:[\\d+]}/skills/{id2:[\\d+]}",
+        "/api/competencies/{id:[\\d+]}/skills",
+        "/api/competencies",
     )
 
     @Bean

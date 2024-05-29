@@ -33,7 +33,7 @@ spring:
         - id: main
           uri: http://localhost:8001
           predicates:
-            - Path=/main-app/api-docs,/api/competencies/**
+            - Path=/main-app/api-docs,/api/competencies/**,/api/users/**
 
         ## File-Manager ROUTES
         - id: file-manager
